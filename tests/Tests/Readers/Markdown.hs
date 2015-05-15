@@ -7,6 +7,8 @@ import Tests.Helpers
 import Tests.Arbitrary()
 import Text.Pandoc.Builder
 import qualified Data.Set as Set
+import qualified Data.Map as M
+import Data.Monoid (mconcat)
 -- import Text.Pandoc.Shared ( normalize )
 import Text.Pandoc
 import Text.Pandoc.Error
@@ -371,5 +373,33 @@ tests = [ testGroup "inline code"
                 cite [Citation "cita" [] [Str "foo"] AuthorInText 0 0]
                   (str "@cita" <> space <> str "[foo]")
               )
+          ]
+        , let (=>>) :: ToMetaValue b => String -> b -> M.Map String MetaValue
+              k =>> v = M.singleton k (toMetaValue v)
+              mkmeta = flip Pandoc [] . Meta . mconcat
+          in testGroup "Raw metadata strings"
+          [ "rawstring specifier" =:
+            unlines [ "---"
+                    , "testString:"
+                    , "    (*): Hello world!"
+                    , "testString2: Hello world!"
+                    , "testObj:"
+                    , "    (*): Yes"
+                    , "testString3:"
+                    , "    (*): 'Yes'"
+                    , "testObj3:"
+                    , "    (*):"
+                    , "        - abc"
+                    , "        - def"
+                    , "..."
+                    ]
+            =?> mkmeta
+                  [ "testString"  =>> ("(*)" =>> MetaString "Hello world!")
+                  , "testString2" =>> text "Hello world!"
+                  , "testObj"     =>> ("(*)" =>> True)
+                  , "testString3" =>> ("(*)" =>> MetaString "Yes")
+                  , "testObj3"    =>> ("(*)" =>> [ MetaString "abc"
+                                                 , MetaString "def"])
+                  ]
           ]
         ]

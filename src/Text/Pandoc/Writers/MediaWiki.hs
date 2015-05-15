@@ -35,7 +35,7 @@ import Text.Pandoc.Options
 import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Pretty (render)
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.XML ( escapeStringForXML )
 import Data.List ( intersect, intercalate )
 import Network.URI ( isURI )
@@ -78,7 +78,7 @@ pandocToMediaWiki (Pandoc meta blocks) = do
   let context = defField "body" main
                 $ defField "toc" (writerTableOfContents opts) metadata
   return $ if writerStandalone opts
-     then renderTemplate' (writerTemplate opts) context
+     then renderTemplateWriter' WriterMediaWiki (writerTemplate opts) context
      else main
 
 -- | Escape special characters for MediaWiki.

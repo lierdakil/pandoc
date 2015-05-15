@@ -175,7 +175,7 @@ pandocToLaTeX options (Pandoc meta blocks) = do
                          _        -> id) $
                   metadata
   return $ if writerStandalone options
-              then renderTemplate' template context
+              then renderTemplateWriter' WriterLaTeX template context
               else main
 
 -- | Convert Elements to LaTeX

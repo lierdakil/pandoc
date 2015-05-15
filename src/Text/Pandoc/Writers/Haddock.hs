@@ -32,7 +32,7 @@ Haddock:  <http://www.haskell.org/haddock/doc/html/>
 -}
 module Text.Pandoc.Writers.Haddock (writeHaddock) where
 import Text.Pandoc.Definition
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Options
@@ -74,7 +74,7 @@ pandocToHaddock opts (Pandoc meta blocks) = do
   let context  = defField "body" main
                $ metadata
   if writerStandalone opts
-     then return $ renderTemplate' (writerTemplate opts) context
+     then return $ renderTemplateWriter' WriterHaddock (writerTemplate opts) context
      else return main
 
 -- | Return haddock representation of notes.

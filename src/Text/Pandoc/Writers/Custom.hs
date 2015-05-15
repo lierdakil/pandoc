@@ -181,7 +181,7 @@ writeCustom luaFile opts doc@(Pandoc meta _) = do
   if writerStandalone opts
      then do
        let context' = setField "body" body context
-       return $ renderTemplate' (writerTemplate opts) context'
+       return $ renderTemplateWriter' WriterCustom (writerTemplate opts) context'
      else return body
 
 docToCustom :: LuaState -> WriterOptions -> Pandoc -> IO String

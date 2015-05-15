@@ -33,7 +33,7 @@ Markdown:  <http://daringfireball.net/projects/markdown/>
 module Text.Pandoc.Writers.Markdown (writeMarkdown, writePlain) where
 import Text.Pandoc.Definition
 import Text.Pandoc.Walk
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Options
@@ -202,7 +202,7 @@ pandocToMarkdown opts (Pandoc meta blocks) = do
                      else defField "titleblock" (render' titleblock))
                $ metadata
   if writerStandalone opts
-     then return $ renderTemplate' (writerTemplate opts) context
+     then return $ renderTemplateWriter' WriterMarkdown (writerTemplate opts) context
      else return main
 
 -- | Return markdown representation of reference key table.

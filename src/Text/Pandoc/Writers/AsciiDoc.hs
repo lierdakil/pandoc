@@ -38,7 +38,7 @@ AsciiDoc:  <http://www.methods.co.nz/asciidoc/>
 -}
 module Text.Pandoc.Writers.AsciiDoc (writeAsciiDoc) where
 import Text.Pandoc.Definition
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Options
@@ -95,7 +95,7 @@ pandocToAsciiDoc opts (Pandoc meta blocks) = do
                $ defField "titleblock" titleblock
                $ metadata'
   if writerStandalone opts
-     then return $ renderTemplate' (writerTemplate opts) context
+     then return $ renderTemplateWriter' WriterAsciiDoc (writerTemplate opts) context
      else return main
 
 -- | Escape special characters for AsciiDoc.

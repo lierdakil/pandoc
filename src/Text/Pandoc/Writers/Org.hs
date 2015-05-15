@@ -37,7 +37,7 @@ import Text.Pandoc.Options
 import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Pretty
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Data.List ( intersect, intersperse, transpose )
 import Control.Monad.State
 import Control.Applicative ( (<$>) )
@@ -78,7 +78,7 @@ pandocToOrg (Pandoc meta blocks) = do
               $ defField "math" hasMath
               $ metadata
   if writerStandalone opts
-     then return $ renderTemplate' (writerTemplate opts) context
+     then return $ renderTemplateWriter' WriterOrg (writerTemplate opts) context
      else return main
 
 -- | Return Org representation of notes.

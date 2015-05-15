@@ -47,7 +47,7 @@ import Text.Pandoc.Options ( WriterOptions(
 import Text.Pandoc.Shared ( escapeURI, removeFormatting, camelCaseToHyphenated
                           , trimr, normalize, substitute  )
 import Text.Pandoc.Writers.Shared ( defField, metaToJSON )
-import Text.Pandoc.Templates ( renderTemplate' )
+import Text.Pandoc.Templates ( renderTemplateWriter', WriterType(..) )
 import Data.List ( intersect, intercalate, isPrefixOf, transpose )
 import Data.Default (Default(..))
 import Network.URI ( isURI )
@@ -102,7 +102,7 @@ pandocToDokuWiki opts (Pandoc meta blocks) = do
                 $ defField "toc" (writerTableOfContents opts)
                 $ metadata
   if writerStandalone opts
-     then return $ renderTemplate' (writerTemplate opts) context
+     then return $ renderTemplateWriter' WriterDokuWiki (writerTemplate opts) context
      else return main
 
 -- | Escape special characters for DokuWiki.

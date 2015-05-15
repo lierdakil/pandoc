@@ -202,7 +202,7 @@ inTemplate :: TemplateTarget a
            -> Value
            -> Html
            -> a
-inTemplate opts context body = renderTemplate' (writerTemplate opts)
+inTemplate opts context body = renderTemplateWriter' WriterHTML (writerTemplate opts)
                              $ defField "body" (renderHtml body) context
 
 -- | Like Text.XHtml's identifier, but adds the writerIdentifierPrefix
@@ -769,7 +769,7 @@ inlineToHtml opts inline =
               let brtag = if writerHtml5 opts then H5.br else H.br
               return  $ case t of
                          InlineMath  -> m
-                         DisplayMath -> brtag >> m >> brtag 
+                         DisplayMath -> brtag >> m >> brtag
     (RawInline f str)
       | f == Format "latex" ->
                           case writerHTMLMathMethod opts of

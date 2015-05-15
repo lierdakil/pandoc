@@ -19,7 +19,7 @@ import Text.Pandoc.XML
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Shared (splitBy)
 import Text.Pandoc.Options
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Pretty
 import Data.List (isPrefixOf, isInfixOf, stripPrefix)
 import Data.Text as Text (breakOnAll, pack)
@@ -134,7 +134,7 @@ writeICML opts (Pandoc meta blocks) =
               $ defField "hyperlinks" (render' $ hyperlinksToDoc $ links st)
               $ metadata
   in  if writerStandalone opts
-         then renderTemplate' (writerTemplate opts) context
+         then renderTemplateWriter' WriterICML (writerTemplate opts) context
          else main
 
 -- | Auxilary functions for parStylesToDoc and charStylesToDoc.

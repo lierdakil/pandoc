@@ -35,7 +35,7 @@ import Text.Pandoc.Shared
 import Text.Pandoc.Walk
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Options
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Readers.TeXMath
 import Data.List ( stripPrefix, isPrefixOf, intercalate, isSuffixOf )
 import Data.Char ( toLower )
@@ -99,7 +99,7 @@ writeDocbook opts (Pandoc meta blocks) =
                                         _        -> False)
               $ metadata
   in  if writerStandalone opts
-         then renderTemplate' (writerTemplate opts) context
+         then renderTemplateWriter' WriterDocbook (writerTemplate opts) context
          else main
 
 -- | Convert an Element to Docbook.

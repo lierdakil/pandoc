@@ -34,7 +34,7 @@ module Text.Pandoc.Writers.CommonMark (writeCommonMark) where
 import Text.Pandoc.Writers.HTML (writeHtmlString)
 import Text.Pandoc.Definition
 import Text.Pandoc.Shared (isTightList)
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Options
 import CMark
@@ -57,7 +57,7 @@ writeCommonMark opts (Pandoc meta blocks) = rendered
                      meta
         context = defField "body" main $ metadata
         rendered = if writerStandalone opts
-                      then renderTemplate' (writerTemplate opts) context
+                      then renderTemplateWriter' WriterCMark (writerTemplate opts) context
                       else main
 
 processNotes :: Inline -> State [[Block]] Inline

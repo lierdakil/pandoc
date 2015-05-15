@@ -33,7 +33,7 @@ import Text.Pandoc.Options
 import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Readers.TeXMath
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Walk
 import Data.List ( isSuffixOf, intercalate )
 import Data.Char ( ord, chr, isDigit )
@@ -108,7 +108,7 @@ writeRTF options (Pandoc meta@(Meta metamap) blocks) =
                     else id)
               $ metadata
   in  if writerStandalone options
-         then renderTemplate' (writerTemplate options) context
+         then renderTemplateWriter' WriterRTF (writerTemplate options) context
          else case reverse body of
                 ('\n':_) -> body
                 _        -> body ++ "\n"

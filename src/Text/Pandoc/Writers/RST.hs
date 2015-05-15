@@ -35,7 +35,7 @@ import Text.Pandoc.Definition
 import Text.Pandoc.Options
 import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Builder (deleteMeta)
 import Data.Maybe (fromMaybe)
 import Data.List ( isPrefixOf, stripPrefix, intersperse, transpose )
@@ -98,7 +98,7 @@ pandocToRST (Pandoc meta blocks) = do
               $ defField "rawtex" rawTeX
               $ metadata
   if writerStandalone opts
-     then return $ renderTemplate' (writerTemplate opts) context
+     then return $ renderTemplateWriter' WriterRST (writerTemplate opts) context
      else return main
   where
     normalizeHeadings lev (Header l a i:bs) = Header lev a i:normalizeHeadings (lev+1) cont ++ normalizeHeadings lev bs'

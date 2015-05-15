@@ -35,7 +35,7 @@ import Text.Pandoc.Options
 import Text.Pandoc.Shared
 import Text.Pandoc.Pretty (render)
 import Text.Pandoc.Writers.Shared
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.XML ( escapeStringForXML )
 import Data.List ( intercalate )
 import Control.Monad.State
@@ -64,7 +64,7 @@ pandocToTextile opts (Pandoc meta blocks) = do
   let main = body ++ if null notes then "" else ("\n\n" ++ notes)
   let context = defField "body" main metadata
   if writerStandalone opts
-     then return $ renderTemplate' (writerTemplate opts) context
+     then return $ renderTemplateWriter' WriterTextile (writerTemplate opts) context
      else return main
 
 withUseTags :: State WriterState a -> State WriterState a

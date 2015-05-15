@@ -33,7 +33,7 @@ import Text.Pandoc.Definition
 import Text.Pandoc.Options
 import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Printf ( printf )
 import Data.List ( transpose, maximumBy )
 import Data.Ord ( comparing )
@@ -90,7 +90,7 @@ pandocToTexinfo options (Pandoc meta blocks) = do
               $ defField "strikeout" (stStrikeout st)
               $ metadata
   if writerStandalone options
-     then return $ renderTemplate' (writerTemplate options) context
+     then return $ renderTemplateWriter' WriterTexinfo (writerTemplate options) context
      else return body
 
 -- | Escape things as needed for Texinfo.

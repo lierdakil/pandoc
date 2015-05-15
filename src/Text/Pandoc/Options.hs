@@ -229,6 +229,7 @@ data ReaderOptions = ReaderOptions{
        , readerDefaultImageExtension :: String -- ^ Default extension for images
        , readerTrace           :: Bool -- ^ Print debugging info
        , readerTrackChanges    :: TrackChanges
+       , readerRawMetaStrings  :: Bool
 } deriving (Show, Read, Data, Typeable)
 
 instance Default ReaderOptions
@@ -245,6 +246,7 @@ instance Default ReaderOptions
                , readerDefaultImageExtension = ""
                , readerTrace                 = False
                , readerTrackChanges          = AcceptChanges
+               , readerRawMetaStrings        = False
                }
 
 --

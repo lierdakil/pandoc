@@ -87,7 +87,7 @@ pandocToMan opts (Pandoc meta blocks) = do
               $ defField "has-tables" hasTables
               $ metadata
   if writerStandalone opts
-     then return $ renderTemplate' (writerTemplate opts) context
+     then return $ renderTemplateWriter' WriterMan (writerTemplate opts) context
      else return main
 
 -- | Return man representation of notes.
@@ -363,4 +363,3 @@ inlineToMan _ (Note contents) = do
   notes <- liftM stNotes get
   let ref = show $ (length notes)
   return $ char '[' <> text ref <> char ']'
-

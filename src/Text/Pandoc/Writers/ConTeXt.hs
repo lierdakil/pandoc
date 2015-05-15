@@ -39,7 +39,7 @@ import Data.List ( intercalate )
 import Data.Char ( ord )
 import Control.Monad.State
 import Text.Pandoc.Pretty
-import Text.Pandoc.Templates ( renderTemplate' )
+import Text.Pandoc.Templates ( renderTemplateWriter', WriterType(..) )
 import Network.URI ( isURI, unEscapeString )
 
 data WriterState =
@@ -85,7 +85,7 @@ pandocToConTeXt options (Pandoc meta blocks) = do
                     (lookup "lang" $ writerVariables options))
                 $ metadata
   return $ if writerStandalone options
-              then renderTemplate' (writerTemplate options) context
+              then renderTemplateWriter' WriterConTeXt (writerTemplate options) context
               else main
 
 -- escape things as needed for ConTeXt
@@ -360,4 +360,3 @@ sectionHeader (ident,classes,_) hdrLevel lst = do
                else if level' == 0
                        then char '\\' <> chapter <> braces contents
                        else contents <> blankline
-

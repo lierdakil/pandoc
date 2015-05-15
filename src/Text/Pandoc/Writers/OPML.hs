@@ -33,7 +33,7 @@ import Text.Pandoc.XML
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Shared
 import Text.Pandoc.Options
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Writers.HTML (writeHtmlString)
 import Text.Pandoc.Writers.Markdown (writeMarkdown)
 import Text.Pandoc.Pretty
@@ -57,7 +57,7 @@ writeOPML opts (Pandoc meta blocks) =
       main     = render colwidth $ vcat (map (elementToOPML opts) elements)
       context = defField "body" main metadata
   in  if writerStandalone opts
-         then renderTemplate' (writerTemplate opts) context
+         then renderTemplateWriter' WriterOPML (writerTemplate opts) context
          else main
 
 writeHtmlInlines :: [Inline] -> String

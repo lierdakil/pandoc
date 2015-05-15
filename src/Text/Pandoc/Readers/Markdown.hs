@@ -1,5 +1,5 @@
 {-# LANGUAGE RelaxedPolyRec #-} -- needed for inlinesBetween on GHC < 7
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
 {-
 Copyright (C) 2006-2015 John MacFarlane <jgm@berkeley.edu>
 
@@ -303,7 +303,8 @@ toMetaValue opts x = toMeta <$> readMarkdown opts' (T.unpack x)
                              ]
 
 yamlToMeta :: ReaderOptions -> Yaml.Value -> Either PandocError MetaValue
-yamlToMeta opts (Yaml.String t) = toMetaValue opts t
+yamlToMeta opts (Yaml.String t) | readerRawMetaStrings opts = return $ MetaString (T.unpack t)
+                                | otherwise                 = toMetaValue opts t
 yamlToMeta _    (Yaml.Number n)
   -- avoid decimal points for numbers that don't need them:
   | base10Exponent n >= 0     = return $ MetaString $ show
@@ -316,7 +317,12 @@ yamlToMeta opts (Yaml.Object o) = MetaMap <$> H.foldrWithKey (\k v m ->
                                 if ignorable k
                                    then m
                                    else (do
-                                    v' <- yamlToMeta opts v
+                                    let p | not $ null (T.unpack k)
+                                          , head (T.unpack k) == '('
+                                          , last (T.unpack k) == ')'
+                                          = yamlToMeta opts{readerRawMetaStrings=True} v
+                                          | otherwise = yamlToMeta opts v
+                                    v' <- p
                                     m' <- m
                                     return (M.insert (T.unpack k) v' m')))
                                 (return M.empty) o

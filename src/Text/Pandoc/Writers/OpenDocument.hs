@@ -33,7 +33,7 @@ module Text.Pandoc.Writers.OpenDocument ( writeOpenDocument ) where
 import Text.Pandoc.Definition
 import Text.Pandoc.Options
 import Text.Pandoc.XML
-import Text.Pandoc.Templates (renderTemplate')
+import Text.Pandoc.Templates (renderTemplateWriter',WriterType(..))
 import Text.Pandoc.Readers.TeXMath
 import Text.Pandoc.Pretty
 import Text.Printf ( printf )
@@ -198,7 +198,7 @@ writeOpenDocument opts (Pandoc meta blocks) =
               $ defField "automatic-styles" (render' automaticStyles)
               $ metadata
   in  if writerStandalone opts
-         then renderTemplate' (writerTemplate opts) context
+         then renderTemplateWriter' WriterOpenDocument (writerTemplate opts) context
          else body
 
 withParagraphStyle :: WriterOptions -> String -> [Block] -> State WriterState Doc

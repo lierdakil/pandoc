@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances, CPP,
-    OverloadedStrings, GeneralizedNewtypeDeriving #-}
+    OverloadedStrings, GeneralizedNewtypeDeriving,
+    DeriveDataTypeable #-}
 {-
 Copyright (C) 2009-2015 John MacFarlane <jgm@berkeley.edu>
 
@@ -86,15 +87,18 @@ example above.
 -}
 
 module Text.Pandoc.Templates ( renderTemplate
+                             , renderTemplateWriter
                              , renderTemplate'
+                             , renderTemplateWriter'
                              , TemplateTarget(..)
                              , varListToJSON
                              , compileTemplate
                              , Template
+                             , WriterType(..)
                              , getDefaultTemplate ) where
 
 import Data.Char (isAlphaNum)
-import Control.Monad (guard, when)
+import Control.Monad (guard, when, mplus)
 import Data.Aeson (ToJSON(..), Value(..))
 import qualified Text.Parsec as P
 import Text.Parsec.Text (Parser)
@@ -118,6 +122,8 @@ import Text.Blaze (preEscapedText, Html)
 import Data.ByteString.Lazy (ByteString, fromChunks)
 import Text.Pandoc.Shared (readDataFileUTF8, ordNub)
 import Data.Vector ((!?))
+import Data.Data (Data,Typeable,toConstr)
+import Data.Maybe (fromJust)
 
 -- | Get default template for the specified writer.
 getDefaultTemplate :: (Maybe FilePath) -- ^ User data directory to search first
@@ -139,8 +145,15 @@ getDefaultTemplate user writer = do
        _        -> let fname = "templates" </> "default" <.> format
                    in  E.try $ readDataFileUTF8 user fname
 
-newtype Template = Template { unTemplate :: Value -> Text }
+newtype Template = Template { unTemplate :: WriterType -> Value -> Text }
                  deriving Monoid
+
+data WriterType = WriterAsciiDoc | WriterCMark | WriterConTeXt | WriterCustom | WriterDocbook |
+                  WriterDokuWiki | WriterEPUB | WriterFB2 | WriterHaddock | WriterHTML | WriterICML |
+                  WriterLaTeX | WriterMan | WriterMediaWiki | WriterMarkdown | WriterOpenDocument |
+                  WriterOPML | WriterOrg | WriterRST | WriterRTF | WriterTexinfo | WriterTextile |
+                  WriterWildcard
+                  deriving (Data,Typeable)
 
 type Variable = [Text]
 
@@ -169,8 +182,28 @@ varListToJSON assoc = toJSON $ M.fromList assoc'
         toVal []  = Null
         toVal xs  = toJSON xs
 
+writerTypeC :: WriterType -> T.Text
+writerTypeC WriterWildcard = "(*)"
+writerTypeC x = "(" `T.append` name `T.append` ")"
+  where name = T.toLower stripped
+        stripped = fromJust $ T.stripPrefix "Writer" constr
+        constr = T.pack $ show (toConstr x)
+
+writerTypeCS :: [WriterType] -> [T.Text]
+writerTypeCS wts = map writerTypeC wts ++ [writerTypeC WriterWildcard]
+
+writerTypeStr :: WriterType -> [T.Text]
+writerTypeStr WriterWildcard = writerTypeCS []
+writerTypeStr WriterCMark    = writerTypeCS [WriterCMark, WriterMarkdown]
+writerTypeStr WriterMarkdown = writerTypeCS [WriterMarkdown, WriterCMark]
+writerTypeStr x = writerTypeCS [x]
+
+
+renderTemplateWriter :: (ToJSON a, TemplateTarget b) => WriterType -> Template -> a -> b
+renderTemplateWriter w (Template f) context = toTarget $ f w $ toJSON context
+
 renderTemplate :: (ToJSON a, TemplateTarget b) => Template -> a -> b
-renderTemplate (Template f) context = toTarget $ f $ toJSON context
+renderTemplate = renderTemplateWriter WriterWildcard
 
 compileTemplate :: Text -> Either String Template
 compileTemplate template =
@@ -180,17 +213,20 @@ compileTemplate template =
 
 -- | Like 'renderTemplate', but compiles the template first,
 -- raising an error if compilation fails.
+renderTemplateWriter' :: (ToJSON a, TemplateTarget b) => WriterType -> String -> a -> b
+renderTemplateWriter' w template =
+  renderTemplateWriter w (either error id $ compileTemplate $ T.pack template)
+
 renderTemplate' :: (ToJSON a, TemplateTarget b) => String -> a -> b
-renderTemplate' template =
-  renderTemplate (either error id $ compileTemplate $ T.pack template)
+renderTemplate' = renderTemplateWriter' WriterWildcard
 
 var :: Variable -> Template
 var = Template . resolveVar
 
-resolveVar :: Variable -> Value -> Text
-resolveVar var' val =
-  case multiLookup var' val of
-       Just (Array vec) -> maybe mempty (resolveVar []) $ vec !? 0
+resolveVar :: Variable -> WriterType -> Value -> Text
+resolveVar var' w val =
+  case multiLookup w var' val of
+       Just (Array vec) -> maybe mempty (resolveVar [] w) $ vec !? 0
        Just (String t)  -> T.stripEnd t
        Just (Number n)  -> T.pack $ show n
        Just (Bool True) -> "true"
@@ -198,31 +234,34 @@ resolveVar var' val =
        Just _           -> mempty
        Nothing          -> mempty
 
-multiLookup :: [Text] -> Value -> Maybe Value
-multiLookup [] x = Just x
-multiLookup (v:vs) (Object o) = H.lookup v o >>= multiLookup vs
-multiLookup _ _ = Nothing
+multiLookup :: WriterType -> [Text] -> Value -> Maybe Value
+multiLookup w [] x@(Object o)
+  = foldr mplus (Just x) $
+      flip H.lookup o `map` writerTypeStr w
+multiLookup _ [] x = Just x
+multiLookup w (v:vs) (Object o) = H.lookup v o >>= multiLookup w vs
+multiLookup _ _ _ = Nothing
 
 lit :: Text -> Template
-lit = Template . const
+lit = Template . const . const
 
 cond :: Variable -> Template -> Template -> Template
-cond var' (Template ifyes) (Template ifno) = Template $ \val ->
-  case resolveVar var' val of
-       "" -> ifno val
-       _  -> ifyes val
+cond var' (Template ifyes) (Template ifno) = Template $ \w val ->
+  case resolveVar var' w val of
+       "" -> ifno w val
+       _  -> ifyes w val
 
 iter :: Variable -> Template -> Template -> Template
-iter var' template sep = Template $ \val -> unTemplate
-  (case multiLookup var' val of
+iter var' template sep = Template $ \w val -> unTemplate
+  (case multiLookup w var' val of
            Just (Array vec) -> mconcat $ intersperse sep
                                        $ map (setVar template var')
                                        $ toList vec
            Just x           -> cond var' (setVar template var' x) mempty
-           Nothing          -> mempty) val
+           Nothing          -> mempty) w val
 
 setVar :: Template -> Variable -> Value -> Template
-setVar (Template f) var' val = Template $ f . replaceVar var' val
+setVar (Template f) var' val = Template $ \w -> f w . replaceVar var' val
 
 replaceVar :: Variable -> Value -> Value -> Value
 replaceVar []     new _          = new
@@ -324,6 +363,6 @@ pFor = do
 
 indent :: Int -> Template -> Template
 indent 0   x            = x
-indent ind (Template f) = Template $ \val -> indent' (f val)
+indent ind (Template f) = Template $ \w val -> indent' (f w val)
   where indent' t = T.concat
                     $ intersperse ("\n" <> T.replicate ind " ") $ T.lines t
