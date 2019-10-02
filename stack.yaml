@@ -20,6 +20,10 @@ extra-deps:
 - HsYAML-0.2.0.0
 - HsYAML-aeson-0.2.0.0
 - doctemplates-0.6.1
+- github: lierdakil/regex-pcre-builtin
+  commit: 6037129fa8efe5fc66be8f11987737e6c6aa4567
+- regex-base-0.94.0.0
+allow-newer: true
 ghc-options:
    "$locals": -fhide-source-paths -Wno-missing-home-modules
 resolver: lts-14.6
