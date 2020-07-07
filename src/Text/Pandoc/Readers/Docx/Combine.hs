@@ -59,8 +59,8 @@ module Text.Pandoc.Readers.Docx.Combine ( smushInlines
 
 import Data.List
 import Data.Bifunctor
-import Data.Sequence ( ViewL (..), ViewR (..), viewl, viewr, spanr, spanl
-                     , (><), (|>) )
+import Data.Sequence ( ViewL (..), ViewR (..), Seq, viewl, viewr, spanr, spanl
+                     , (><), (|>), (<|) )
 import Text.Pandoc.Builder
 
 data Modifier a = Modifier (a -> a)
@@ -76,10 +76,10 @@ spaceOutInlinesR ms = (stackInlines fs (l <> m'), r)
 
 spaceOutInlines :: Inlines -> (Inlines, ([Modifier Inlines], Inlines), Inlines)
 spaceOutInlines ils =
-  let (fs, ils') = unstackInlines ils
+  let (fs1, (fs2, ils')) = unstackInlines ilModInR <$> unstackInlines ilModInL ils
       (left, (right, contents')) = second (spanr isSpace) $ spanl isSpace $ unMany ils'
       -- NOTE: spanr counterintuitively returns suffix as the FIRST tuple element
-  in (Many left, (fs, Many contents'), Many right)
+  in (Many left, (fs1 <> fs2, Many contents'), Many right)
 
 isSpace :: Inline -> Bool
 isSpace Space = True
@@ -94,35 +94,50 @@ stackInlines (Modifier f : fs) ms =
   else f $ stackInlines fs ms
 stackInlines (AttrModifier f attr : fs) ms = f attr $ stackInlines fs ms
 
-unstackInlines :: Inlines -> ([Modifier Inlines], Inlines)
-unstackInlines ms = case ilModifierAndInnards ms of
+unstackInlines :: IlModIn -> Inlines -> ([Modifier Inlines], Inlines)
+unstackInlines ilModIn ms = case ilModIn ms of
   Nothing         -> ([], ms)
-  Just (f, inner) -> first (f :) $ unstackInlines inner
+  Just (f, inner) -> first (f :) $ unstackInlines ilModIn inner
 
-ilModifierAndInnards :: Inlines -> Maybe (Modifier Inlines, Inlines)
-ilModifierAndInnards ils = case viewl $ unMany ils of
-  x :< xs | null xs -> second fromList <$> case x of
+type IlModIn = Inlines -> Maybe (Modifier Inlines, Inlines)
+
+ilModInL, ilModInR :: IlModIn
+ilModInL ils = case viewl $ unMany ils of
+  x :< xs -> second (<> Many xs) <$> extractModifier x xs
+  _ -> Nothing
+
+ilModInR ils = case viewr $ unMany ils of
+  xs :> x -> second (Many xs <>) <$> extractModifier x xs
+  _ -> Nothing
+
+extractModifier :: Inline -> Seq Inline -> Maybe (Modifier Inlines, Inlines)
+extractModifier x xs
+  | all isSpace xs = second fromList <$> case x of
     Emph lst          -> Just (Modifier emph, lst)
     Strong lst        -> Just (Modifier strong, lst)
     SmallCaps lst     -> Just (Modifier smallcaps, lst)
-    Strikeout lst     -> Just (Modifier strikeout, lst)
-    Underline lst     -> Just (Modifier underline, lst)
-    Superscript lst   -> Just (Modifier superscript, lst)
-    Subscript lst     -> Just (Modifier subscript, lst)
-    Link attr lst tgt -> Just (Modifier $ linkWith attr (fst tgt) (snd tgt), lst)
-    Span attr lst     -> Just (AttrModifier spanWith attr, lst)
+    _ | null xs   -> case x of
+      Strikeout lst     -> Just (Modifier strikeout, lst)
+      Underline lst     -> Just (Modifier underline, lst)
+      Superscript lst   -> Just (Modifier superscript, lst)
+      Subscript lst     -> Just (Modifier subscript, lst)
+      Link attr lst tgt -> Just (Modifier $ linkWith attr (fst tgt) (snd tgt), lst)
+      Span attr lst     -> Just (AttrModifier spanWith attr, lst)
+      _                 -> Nothing
     _                 -> Nothing
-  _ -> Nothing
+  | otherwise = Nothing
 
 inlinesL :: Inlines -> (Inlines, Inlines)
-inlinesL ils = case viewl $ unMany ils of
-  (s :< sq) -> (singleton s, Many sq)
+inlinesL ils = case viewl ils' of
+  (s :< sq) -> (Many $ spc |> s, Many sq)
   _         -> (mempty, ils)
+  where (spc, ils') = spanl isSpace $ unMany ils
 
 inlinesR :: Inlines -> (Inlines, Inlines)
-inlinesR ils = case viewr $ unMany ils of
-  (sq :> s) -> (Many sq, singleton s)
+inlinesR ils = case viewr ils' of
+  (sq :> s) -> (Many sq, Many $ s <| spc)
   _         -> (ils, mempty)
+  where (spc, ils') = spanr isSpace $ unMany ils
 
 combineInlines :: Inlines -> Inlines -> Inlines
 combineInlines x y =
@@ -133,8 +148,8 @@ combineInlines x y =
 
 combineSingletonInlines :: Inlines -> Inlines -> Inlines
 combineSingletonInlines x y =
-  let (xfs, xs) = unstackInlines x
-      (yfs, ys) = unstackInlines y
+  let (xfs, xs) = unstackInlines ilModInL x
+      (yfs, ys) = unstackInlines ilModInR y
       shared = xfs `intersect` yfs
       x_remaining = xfs \\ shared
       y_remaining = yfs \\ shared
